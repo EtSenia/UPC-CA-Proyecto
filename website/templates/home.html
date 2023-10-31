@@ -1,0 +1,108 @@
+{% extends "base.html"%}
+
+{% block title %}Home{% endblock %}
+
+{% block head %} 
+<style>
+    #termino {
+    width: 300px; /* Establece el ancho del campo de entrada */
+    /* Otros estilos según sea necesario */
+    }
+    #suggestionsList{
+    width: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <form method="POST" name="dbloadForm">
+        <br />
+        <button type="submit" class="btn btn-primary" name="action" value="dbload">Load DB</button>
+        <br />
+    </form>
+        
+
+    <form method="POST" name="Prueba">
+        <br />
+        <div class="form-buscar">
+            <label for="email">Prueba</label>
+            <input type="text" class="form-control" id="termino" name="termino" oninput="buscar()" placeholder="Enter text">
+            <ul id="suggestionsList" class="list-group mt-2">
+                {% for suggestion in suggestions %}
+                <li class="list-group-item">{{ suggestion }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <br />
+        <button type="submit" class="btn btn-primary" name="action" value="btnprueba">prueba</button>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script> 
+        function buscar() {
+            var term = document.getElementById('termino').value.trim();
+            var a = document.getElementById('suggestionsList').style.display
+            console.log('Display: ', a)
+
+            // Verificar si el término de búsqueda está presente
+            if (term !== '') {
+                fetch(`/buscar?termino=${term}`, {
+                    method: 'GET',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Respuesta del servidor:', data);
+                    var suggestionsList = document.getElementById('suggestionsList');
+                    console.log('Contenedor de sugerencias:', suggestionsList);
+                    suggestionsList.innerHTML = '';
+
+                    if (data && data.suggestions && data.suggestions.length > 0) {
+                        data.suggestions.forEach(suggestion => {
+                            var button = document.createElement('button');
+                            button.className = 'btn btn-light suggestion-button'; // Clases de estilo Bootstrap (ajusta según tu framework o CSS)
+                            button.textContent = suggestion;
+
+                            // Agregar un controlador de eventos al hacer clic en el botón
+                            button.addEventListener('click', function(event) {
+                                event.preventDefault(); // Prevenir el comportamiento predeterminado del enlace o botón
+                                document.getElementById('termino').value = suggestion;
+                                buscar(); // Actualizar la tabla de sugerencias después de hacer clic
+                            });
+
+                            // Agregar un controlador de eventos al hacer hover sobre el botón
+                            button.addEventListener('mouseover', function() {
+                                button.classList.add('hovered'); // Clase de estilo para el sombreado (ajusta según tu CSS)
+                            });
+
+                            // Agregar un controlador de eventos al quitar el mouse del botón
+                            button.addEventListener('mouseout', function() {
+                                button.classList.remove('hovered');
+                            });
+
+                            suggestionsList.appendChild(button);
+                        });
+                    } else {
+                        var listItem = document.createElement('button');
+                        listItem.className = 'btn btn-light';
+                        listItem.textContent = 'No se encontraron sugerencias.';
+                        suggestionsList.appendChild(listItem);
+                    }
+                })
+                .catch(error => console.error('Error al procesar la respuesta JSON:', error));
+            }
+        }
+
+        // Agregar el evento 'input' al campo de búsqueda
+        var terminoInput = document.getElementById('termino');
+        terminoInput.addEventListener('input', buscar);
+        // Agregar el evento 'focus' al campo de búsqueda para mostrar la lista de sugerencias
+        terminoInput.addEventListener('focus', function() {
+            document.getElementById('suggestionsList').style.display = '';
+        });
+
+        // Agregar el evento 'blur' al campo de búsqueda para ocultar la lista de sugerencias
+        terminoInput.addEventListener('blur', function() {
+            document.getElementById('suggestionsList').style.display = 'none';
+        });
+    </script>
+{% endblock %}

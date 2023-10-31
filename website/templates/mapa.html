@@ -1,0 +1,34 @@
+{% extends "base.html"%}
+
+{% block title %}Nombre del programa{% endblock %}
+
+{% block head %} 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+    <div id="map" style="height: 600px;"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Recupera la variable aeropuertos de Jinja2
+        var aeropuertos = {{ aeropuertos | tojson }};
+        console.log(aeropuertos);
+        var mymap = L.map('map').setView([aeropuertos[0].lat, aeropuertos[0].lon], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mymap);
+        
+        
+        for (var i = 0; i < aeropuertos.length; i++) {
+            var aeropuerto = aeropuertos[i];
+            L.marker([aeropuerto.lat, aeropuerto.lon]).addTo(mymap)
+                .bindPopup(aeropuerto.nombre);
+        }
+
+        // Añade líneas que conectan los aeropuertos en el orden deseado
+        for (var i = 0; i < aeropuertos.length - 1; i++) {
+            var aeropuerto1 = aeropuertos[i];
+            var aeropuerto2 = aeropuertos[i + 1];
+            L.polyline([[aeropuerto1.lat, aeropuerto1.lon], [aeropuerto2.lat, aeropuerto2.lon]], {color: 'red'}).addTo(mymap);
+        }
+    </script>
+{% endblock %}
