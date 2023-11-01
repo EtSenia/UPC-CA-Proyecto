@@ -1,0 +1,166 @@
+{% extends "base.html"%}
+
+{% block title %}Nombre del programa{% endblock %}
+
+{% block head %} 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #inputOrigenSuggestions div,
+        #inputDestinoSuggestions div {
+            padding: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s; /* Agregamos una transición para suavizar el efecto */
+        }
+
+        #inputOrigenSuggestions div:hover,
+        #inputDestinoSuggestions div:hover {
+            background-color: #60cdf8;
+        }
+
+        #InputContainer {
+            
+            display: flex;
+            
+        }
+
+        #origenContainer,
+        #destinoContainer {
+            margin-right: 20px;
+            position: relative;
+        }
+
+        #inputOrigenSuggestions,
+        #inputDestinoSuggestions {
+            position: absolute;
+            z-index: 1;
+            background-color: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.125);
+            max-height: 150px;
+            overflow-y: hidden;
+            opacity: 0;
+            pointer-events: none;
+            width: 100%;
+            border-radius: 0.25rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        #inputOrigenSuggestions.show,
+        #inputDestinoSuggestions.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #inputOrigenSuggestions {
+            top: 100%; /* Aparecerá debajo del campo de entrada startInput */
+        }
+
+        #inputDestinoSuggestions {
+            top: 100%; /* Aparecerá debajo del campo de entrada destinationInput */
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div id="map" style="height: 600px;"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Recupera la variable aeropuertos de Jinja2
+        var aeropuertos = {{ aeropuertos | tojson }};
+        console.log(aeropuertos);
+        var mymap = L.map('map').setView([aeropuertos[0].lat, aeropuertos[0].lon], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mymap);
+        
+        
+        for (var i = 0; i < aeropuertos.length; i++) {
+            var aeropuerto = aeropuertos[i];
+            L.marker([aeropuerto.lat, aeropuerto.lon]).addTo(mymap)
+                .bindPopup(aeropuerto.nombre);
+        }
+
+        // Añade líneas que conectan los aeropuertos en el orden deseado
+        for (var i = 0; i < aeropuertos.length - 1; i++) {
+            var aeropuerto1 = aeropuertos[i];
+            var aeropuerto2 = aeropuertos[i + 1];
+            L.polyline([[aeropuerto1.lat, aeropuerto1.lon], [aeropuerto2.lat, aeropuerto2.lon]], {color: 'red'}).addTo(mymap);
+        }
+    </script>
+    <br />
+    <div id="InputContainer">
+        <div id="origenContainer">
+            <label for="origen">Origen</label>
+            <input type="text" class="form-control" id="inputOrigen" oninput="getCustomSuggestions('inputOrigen')">
+            <div id="inputOrigenSuggestions"></div>
+        </div>
+        
+        <div id="destinoContainer">
+            <label for="origen">Destino</label>
+            <input type="text" class="form-control" id="inputDestino" oninput="getCustomSuggestions('inputDestino')" placeholder="To">
+            <div id="inputDestinoSuggestions"></div>
+        </div>
+    </div>
+        
+    <script>
+        document.addEventListener('click', function(event) {
+            var inputOrigenContainer = document.getElementById('origenContainer');
+            var inputDestinoContainer = document.getElementById('destinoContainer');
+
+            var isClickInsideOrigen = inputOrigenContainer.contains(event.target);
+            var isClickInsideDestino = inputDestinoContainer.contains(event.target);
+
+            if (!isClickInsideOrigen) {
+                hideSuggestions('inputOrigen');
+            }else{
+                showSuggestions('inputOrigen')
+            }
+
+            if (!isClickInsideDestino) {
+                hideSuggestions('inputDestino');
+            }else{
+                showSuggestions('inputDestino')
+            }
+        });
+
+        function showSuggestions(inputId) {
+            var suggestionsDiv = document.getElementById(`${inputId}Suggestions`);
+            suggestionsDiv.classList.add('show');
+        }
+
+        function hideSuggestions(inputId) {
+            var suggestionsDiv = document.getElementById(`${inputId}Suggestions`);
+            suggestionsDiv.classList.remove('show');
+        }
+
+        function getCustomSuggestions(inputID) {
+        var input = document.getElementById(inputID).value;
+        var suggestionsDiv = document.getElementById(`${inputID}Suggestions`);
+        console.log(suggestionsDiv)
+        console.log(input)
+        // Realizar una solicitud AJAX a tu ruta Flask para obtener sugerencias.
+        // Puedes usar fetch o una biblioteca como jQuery para esto.
+        // Aquí se utiliza fetch como ejemplo.
+
+        fetch(`/get_suggestions?input=${input}`)
+            .then(response => response.json())
+            .then(data => {
+                // Procesar las sugerencias recibidas del servidor y mostrarlas.
+                var databaseSuggestions = data.suggestions || [];
+
+                suggestionsDiv.innerHTML = '';
+
+                databaseSuggestions.forEach(function(suggestion) {
+                    var suggestionElement = document.createElement('div');
+                    suggestionElement.textContent = suggestion;
+                    suggestionElement.addEventListener('click', function() {
+                        document.getElementById(inputID).value = suggestion;
+                        suggestionsDiv.innerHTML = '';
+                    });
+                    suggestionsDiv.appendChild(suggestionElement);
+                });
+            })
+            .catch(error => {
+                console.error('Error al obtener sugerencias:', error);
+            });
+    }
+    </script>
+{% endblock %}
